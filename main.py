@@ -152,7 +152,7 @@ class ComfortablePandA(ui.View):
 		res = self.download_content(LOGIN_URL, 'post', data=login_info)
 
 		self.set_status('Collecting lectures\' information ...')
-		text = res.text.replace('\n', '')
+		text = res.text.replace('\n', '')  # Regular expression does not work as expected on multi-line string
 		tabs = re.findall(r'<li class=".*?nav-menu.*?>.+?</li>', text)[1:]
 		try:
 			otherSiteList = re.search(r'<ul id="otherSiteList".*>.+?</ul>', text).group()
