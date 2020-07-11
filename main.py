@@ -109,11 +109,35 @@ class ComfortablePandA(ui.View):
 
 	@ui.in_background
 	def load(self, sender):
+		try:
+			self.load_assignments()
+		except RuntimeError as e:
+			self.status.text_color = 'red'
+			self.set_status(str(e))
+
+	def download_content(self, url, method, data=None):
+		try:
+			if method == 'post':
+				res = self.session.post(url, data=data)
+			else:
+				res = self.session.get(url)
+			res.raise_for_status()
+		except HTTPError:
+			raise RuntimeError('Could not access to PandA.')
+		except Timeout:
+			raise RuntimeError('Connection timed out.')
+		except ConnectionError:
+			raise RuntimeError('A network error occurred.')
+		else:
+			return res
+
+	def load_assignments(self):
 		self.list.hidden = True
-		self.status.hidden = False
+		self.status.text_color = 'black'
 		self.set_status('Logging in ...')
-		session = requests.session()
-		res = session.get(LOGIN_URL)
+		self.status.hidden = False
+		self.session = requests.session()
+		res = self.download_content(LOGIN_URL, 'get')
 		lt = re.search(r'<input type="hidden" name="lt" value="(.+?)".*>', res.text).group(1)
 
 		login_info = {
@@ -125,17 +149,20 @@ class ComfortablePandA(ui.View):
 			'_eventId': 'submit'
 		}
 
-		res = session.post(LOGIN_URL, data=login_info)
-		res.raise_for_status()
+		res = self.download_content(LOGIN_URL, 'post', data=login_info)
+
 		self.set_status('Collecting lectures\' information ...')
 		text = res.text.replace('\n', '')
 		tabs = re.findall(r'<li class=".*?nav-menu.*?>.+?</li>', text)[1:]
-		otherSiteList = re.search(r'<ul id="otherSiteList".*>.+?</ul>', text).group()
+		try:
+			otherSiteList = re.search(r'<ul id="otherSiteList".*>.+?</ul>', text).group()
+		except AttributeError:
+			raise RuntimeError('Failed to log in to PandA.')
 		tabs += re.findall(r'<li.*?>.+?</li>', otherSiteList)
 		lectures = self.get_lectures(tabs)
 
 		self.set_status('Downloading data ...')
-		json_str = session.get(JSON_URL).text
+		json_str = self.download_content(JSON_URL, 'get').text
 		assignment_collection = json.loads(json_str)['assignment_collection']
 		self.set_status('Parsing data ...')
 		assignments = self.get_assignments(assignment_collection)
