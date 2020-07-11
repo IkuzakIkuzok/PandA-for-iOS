@@ -64,6 +64,9 @@ class ComfortablePandA(ui.View):
 		self.status = ui.Label(frame=(20, 50, 310, 30), hidden=True)
 		self.add_subview(self.status)
 
+	def set_status(self, message):
+		self.status.text = message
+
 	def get_lectures(self, tabs):
 		lectures = {}
 		for tab in tabs:
@@ -108,7 +111,7 @@ class ComfortablePandA(ui.View):
 	def load(self, sender):
 		self.list.hidden = True
 		self.status.hidden = False
-		self.status.text = 'Logging in ...'
+		self.set_status('Logging in ...')
 		session = requests.session()
 		res = session.get(LOGIN_URL)
 		lt = re.search(r'<input type="hidden" name="lt" value="(.+?)".*>', res.text).group(1)
@@ -124,17 +127,17 @@ class ComfortablePandA(ui.View):
 
 		res = session.post(LOGIN_URL, data=login_info)
 		res.raise_for_status()
-		self.status.text = 'Collecting lectures\' information ...'
+		self.set_status('Collecting lectures\' information ...')
 		text = res.text.replace('\n', '')
 		tabs = re.findall(r'<li class=".*?nav-menu.*?>.+?</li>', text)[1:]
 		otherSiteList = re.search(r'<ul id="otherSiteList".*>.+?</ul>', text).group()
 		tabs += re.findall(r'<li.*?>.+?</li>', otherSiteList)
 		lectures = self.get_lectures(tabs)
 
-		self.status.text = 'Downloading data ...'
+		self.set_status('Downloading data ...')
 		json_str = session.get(JSON_URL).text
 		assignment_collection = json.loads(json_str)['assignment_collection']
-		self.status.text = 'Parsing data ...'
+		self.set_status('Parsing data ...')
 		assignments = self.get_assignments(assignment_collection)
 		data = self.make_list_data(assignments, lectures)
 		self.list.data_source = TableSource(data)
