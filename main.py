@@ -110,7 +110,11 @@ class ComfortablePandA(ui.View):
 	@ui.in_background
 	def load(self, sender):
 		try:
-			self.load_assignments()
+			data = self.load_assignments()
+			self.list.data_source = TableSource(data)
+			self.list.reload()
+			self.status.hidden = True
+			self.list.hidden = False
 		except RuntimeError as e:
 			self.status.text_color = 'red'
 			self.set_status(str(e))
@@ -166,11 +170,7 @@ class ComfortablePandA(ui.View):
 		assignment_collection = json.loads(json_str)['assignment_collection']
 		self.set_status('Parsing data ...')
 		assignments = self.get_assignments(assignment_collection)
-		data = self.make_list_data(assignments, lectures)
-		self.list.data_source = TableSource(data)
-		self.list.reload()
-		self.status.hidden = True
-		self.list.hidden = False
+		return self.make_list_data(assignments, lectures)
 
 
 def main():
